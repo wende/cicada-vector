@@ -13,9 +13,6 @@ import urllib.request
 import urllib.error
 from typing import List, Optional
 
-# Add src to path
-sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
-
 from cicada_vector import VectorDB
 
 DEFAULT_OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")

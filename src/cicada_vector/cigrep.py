@@ -10,9 +10,6 @@ import sys
 import time
 from pathlib import Path
 
-# Add src to path if running directly
-sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
-
 from cicada_vector.indexer import DirectoryIndexer
 from cicada_vector.rag import RagDB
 

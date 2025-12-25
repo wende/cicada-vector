@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cicada-vector"
-version = "0.1.0"
+version = "0.1.1"
 description = "A poor man's vector database for Python. Zero dependencies, JSONL storage."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -20,9 +20,9 @@ classifiers = [
 dependencies = []
 
 [project.scripts]
-cicada-vec = "cli:main"
+cicada-vec = "cicada_vector.cli:main"
 cicada-vec-server = "cicada_vector.mcp:main"
-cigrep = "cigrep:main"
+cigrep = "cicada_vector.cigrep:main"
 
 [project.optional-dependencies]
 numpy = ["numpy"]
