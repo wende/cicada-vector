@@ -64,12 +64,20 @@ class HybridDB:
             meta_lookup[doc_id] = self.vector_db.metadata[i]
             
         final_results = []
+        
+        # Normalize scores to 0-1 range
+        if not scores:
+            return []
+            
+        max_score = max(scores.values()) if scores else 1.0
+        
         sorted_ids = sorted(scores.keys(), key=lambda x: scores[x], reverse=True)
         
         for doc_id in sorted_ids:
-            score = scores[doc_id]
+            # Normalize: top result becomes 1.0
+            normalized_score = scores[doc_id] / max_score
             meta = meta_lookup.get(doc_id, {})
-            final_results.append((doc_id, score, meta))
+            final_results.append((doc_id, normalized_score, meta))
             
         return final_results
 
