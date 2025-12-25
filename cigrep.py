@@ -56,15 +56,15 @@ def main():
     # 1. Incremental Index (unless skipped)
     if not args.no_index:
         if args.verbose:
-            print(f"Checking index for {target_path}...")
+            print(f"Checking index for {target_path}...", file=sys.stderr)
             
         try:
             stats = indexer.index_directory(target_path, verbose=args.verbose)
             if args.verbose or stats['added'] > 0:
-                print(f"Index updated: +{stats['added']} files, {stats['skipped']} skipped.")
+                print(f"Index updated: +{stats['added']} files, {stats['skipped']} skipped.", file=sys.stderr)
         except Exception as e:
             # If Ollama fails, we might still want to search existing index
-            print(f"Warning: Indexing failed ({e}). Searching existing data...")
+            print(f"Warning: Indexing failed ({e}). Searching existing data...", file=sys.stderr)
 
     # 2. Search
     db = RagDB(str(storage_dir))
@@ -74,8 +74,8 @@ def main():
         # We reuse the private method from indexer for convenience/consistency
         query_vec = indexer._get_embedding(args.query)
     except Exception as e:
-        print(f"Error: Could not embed query: {e}")
-        print("Is Ollama running?")
+        print(f"Error: Could not embed query: {e}", file=sys.stderr)
+        print("Is Ollama running?", file=sys.stderr)
         sys.exit(1)
         
     results = db.search(args.query, query_vec, k=args.k)
