@@ -81,7 +81,7 @@ jobs:
       - name: Verify tag is on main branch
         run: |
           git fetch origin main
-          if ! git merge-base --is-ancestor HEAD origin/main;
+          if ! git merge-base --is-ancestor HEAD origin/main; then
             echo "Error: Tag must be on main branch for PyPI release"
             exit 1
           fi
@@ -123,7 +123,7 @@ jobs:
       - name: Verify tag is on main branch
         run: |
           git fetch origin main
-          if ! git merge-base --is-ancestor HEAD origin/main;
+          if ! git merge-base --is-ancestor HEAD origin/main; then
             echo "Error: Tag must be on main branch for PyPI release"
             exit 1
           fi
