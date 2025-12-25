@@ -22,12 +22,22 @@ It focuses on **Semantic Awareness** and ease of use. By combining local LLM emb
 
 ## Tools
 
-### 1. `cigrep` (Zero-config Semantic Search)
+### 1. `cigrep` (Semantic Code Search)
 The fastest way to search your code semantically. No setup needed.
 ```bash
 cigrep "how do I handle authentication"
+cigrep "database connection" src/
 ```
-It automatically indexes changed files in the background and searches instantly.
+Automatically indexes changed files in the background and searches instantly.
+
+### 2. `cilog` (Semantic Git Commit Search)
+Search your git commit history semantically.
+```bash
+cilog "authentication bug fix"
+cilog "refactor API" --limit 500
+cilog "performance improvements" --since "1 month ago"
+```
+Indexes commit messages for fast semantic search. Use `--no-diff` (recommended) for faster indexing.
 
 ## MCP Server
 

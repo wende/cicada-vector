@@ -23,6 +23,7 @@ dependencies = []
 cicada-vec = "cicada_vector.cli:main"
 cicada-vec-server = "cicada_vector.mcp:main"
 cigrep = "cicada_vector.cigrep:main"
+cilog = "cicada_vector.cilog:main"
 
 [project.optional-dependencies]
 numpy = ["numpy"]
