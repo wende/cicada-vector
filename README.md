@@ -29,12 +29,25 @@ cigrep "how do I handle authentication"
 ```
 It automatically indexes changed files in the background and searches instantly.
 
-### 2. MCP Server
-Connect your local knowledge base to Claude Code, Cursor, or Gemini:
+## MCP Server
+
+AI assistants can use your local knowledge base directly:
+
+**Using uvx (Recommended):**
 ```bash
+# Start the server (stdio mode)
 export CICADA_HYBRID_DIR=./my_db
+uvx --from cicada-vector cicada-vec-server
+```
+
+**Using pip:**
+```bash
+pip install 'cicada-vector[server]'
+export CICADA_HYBRID_HYBRID_DIR=./my_db
 cicada-vec-server
 ```
+
+**Tools:** `search_vectors`, `search_hybrid`, `search_code_context`, `index_directory`.
 
 ## Quick Start
 
