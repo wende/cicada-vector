@@ -26,58 +26,54 @@ class HybridDB:
         self.vector_db.persist()
         self.keyword_db.persist()
 
-    def _rrf_merge(self, vector_results: List[Tuple[str, float]], keyword_results: List[str], k: int = 60) -> List[Tuple[str, float, dict]]:
+    def _score_boosting_merge(self, vector_results: List[Tuple[str, float]], keyword_results: List[str]) -> List[Tuple[str, float, dict]]:
         """
-        Reciprocal Rank Fusion (RRF)
-        Score = 1 / (k + rank_i)
+        Merge results using Score Boosting.
+        Base score = Cosine Similarity.
+        Keyword match = Boost (+0.2).
         """
-        scores: Dict[str, float] = {}
+        # Map: doc_id -> score
+        final_scores: Dict[str, float] = {}
         
-        # 1. Process Vector Results
+        # 1. Start with Vector Scores (True Semantic Confidence)
         # vector_results is list of (id, cosine_score, meta)
-        for rank, (doc_id, _, _) in enumerate(vector_results):
-            scores[doc_id] = scores.get(doc_id, 0) + (1 / (k + rank + 1))
-            
-        # 2. Process Keyword Results
-        # keyword_results is just list of ids (unordered/binary match)
-        # We treat them all as "Rank 1" matches because exact match is strong
-        for doc_id in keyword_results:
-            scores[doc_id] = scores.get(doc_id, 0) + (1 / (k + 1))
-            # Boost exact keyword matches further? 
-            # RRF is usually robust enough, but let's give keywords a 2x weight
-            # effectively treating them as "Rank 0" or very high confidence
-            scores[doc_id] += (1 / (k + 1)) 
-
-        # 3. Sort and Attach Metadata
-        # We need to look up metadata. It's stored in VectorDB (which is our "primary" store)
-        # VectorDB's 'search' returns meta, but for keyword-only matches we might not have it handy easily
-        # Optimization: In a real DB, we'd have a separate DocStore. 
-        # Here, we assume VectorDB holds the source of truth for metadata.
-        
-        # Build lookup map from vector results (since we usually have them)
-        # If a doc is ONLY found by keywords, we might miss metadata here if we don't scan.
-        # For this MVP, we'll scan the VectorDB in-memory list if needed (it's fast).
-        
-        # Create fast lookup for metadata
         meta_lookup = {}
-        for i, doc_id in enumerate(self.vector_db.ids):
-            meta_lookup[doc_id] = self.vector_db.metadata[i]
+        
+        for doc_id, score, meta in vector_results:
+            final_scores[doc_id] = score
+            meta_lookup[doc_id] = meta
             
+        # 2. Apply Keyword Boosts
+        keyword_set = set(keyword_results)
+        
+        # Boost vector matches that also have keyword matches
+        for doc_id in final_scores:
+            if doc_id in keyword_set:
+                # Boost by 20% (clamped to 1.0)
+                final_scores[doc_id] = min(1.0, final_scores[doc_id] + 0.2)
+                
+        # 3. Add Keyword-Only Matches
+        # If found by keyword but NOT by vector (in top K), give it a base score
+        # A pure keyword match is usually strong, let's say 0.5 minimum confidence
+        for doc_id in keyword_results:
+            if doc_id not in final_scores:
+                final_scores[doc_id] = 0.5
+                # We need to fetch metadata for these since we didn't get it from vector search
+                # In this MVP we rely on vector_db having everything loaded
+                try:
+                    idx = self.vector_db.ids.index(doc_id)
+                    meta_lookup[doc_id] = self.vector_db.metadata[idx]
+                except ValueError:
+                    meta_lookup[doc_id] = {}
+
+        # 4. Sort
         final_results = []
-        
-        # Normalize scores to 0-1 range
-        if not scores:
-            return []
-            
-        max_score = max(scores.values()) if scores else 1.0
-        
-        sorted_ids = sorted(scores.keys(), key=lambda x: scores[x], reverse=True)
+        sorted_ids = sorted(final_scores.keys(), key=lambda x: final_scores[x], reverse=True)
         
         for doc_id in sorted_ids:
-            # Normalize: top result becomes 1.0
-            normalized_score = scores[doc_id] / max_score
+            score = final_scores[doc_id]
             meta = meta_lookup.get(doc_id, {})
-            final_results.append((doc_id, normalized_score, meta))
+            final_results.append((doc_id, score, meta))
             
         return final_results
 
@@ -96,7 +92,7 @@ class HybridDB:
         # 2. Get Exact Keyword Candidates
         keyword_hits = self.keyword_db.search(query_text)
         
-        # 3. Merge
-        merged = self._rrf_merge(vector_hits, keyword_hits)
+        # 3. Merge using Score Boosting
+        merged = self._score_boosting_merge(vector_hits, keyword_hits)
         
         return merged[:k]
