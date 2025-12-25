@@ -6,6 +6,7 @@ Handles file scanning, hashing, and incremental updates.
 import hashlib
 import json
 import os
+import sys
 import time
 import urllib.request
 from pathlib import Path
@@ -92,52 +93,53 @@ class DirectoryIndexer:
                     continue
                 files_to_process.append(p)
 
+        if verbose:
+            print(f"Scanning {len(files_to_process)} files...", file=sys.stderr)
+
+        # 2. Process files
+        for i, file_path in enumerate(files_to_process):
+            rel_path = str(file_path.relative_to(root))
+
+            try:
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+
+                if not content.strip():
+                    continue
+
+                # Check hash
+                current_hash = self._compute_hash(content)
+                if rel_path in self.hashes and self.hashes[rel_path] == current_hash:
+                    stats['skipped'] += 1
+                    if verbose:
+                        print(f"\r[{i+1}/{len(files_to_process)}] Skipped {rel_path} (Unchanged)", end="", flush=True, file=sys.stderr)
+                    continue
+
+                # Embed and Index
                 if verbose:
-                    print(f"Scanning {len(files_to_process)} files...", file=sys.stderr)
-        
-                # 2. Process files
-                for i, file_path in enumerate(files_to_process):
-                    rel_path = str(file_path.relative_to(root))
-                    
-                    try:
-                        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                            content = f.read()
-                        
-                        if not content.strip():
-                            continue
-        
-                        # Check hash
-                        current_hash = self._compute_hash(content)
-                        if rel_path in self.hashes and self.hashes[rel_path] == current_hash:
-                            stats['skipped'] += 1
-                            if verbose:
-                                print(f"\r[{i+1}/{len(files_to_process)}] Skipped {rel_path} (Unchanged)", end="", flush=True, file=sys.stderr)
-                            continue
-        
-                        # Embed and Index
-                        if verbose:
-                            print(f"\r[{i+1}/{len(files_to_process)}] Indexing {rel_path}...", end="", flush=True, file=sys.stderr)
-                        
-                        # Representation: Path + content prefix
-                        representation = f"File: {rel_path}\n\n{content[:1000]}"
-                        vector = self._get_embedding(representation)
-                        
-                        # Add to DB
-                        self.rag_db.add_file(rel_path, content, vector)
-                        
-                        # Update hash
-                        self.hashes[rel_path] = current_hash
-                        stats['added'] += 1
-                        
-                    except Exception as e:
-                        stats['failed'] += 1
-                        if verbose:
-                            print(f"\nError processing {rel_path}: {e}", file=sys.stderr)
-        
-                # 3. Finalize
-                self.rag_db.persist()
-                self._save_hashes()
-                
+                    print(f"\r[{i+1}/{len(files_to_process)}] Indexing {rel_path}...", end="", flush=True, file=sys.stderr)
+
+                # Representation: Path + content prefix
+                representation = f"File: {rel_path}\n\n{content[:1000]}"
+                vector = self._get_embedding(representation)
+
+                # Add to DB
+                self.rag_db.add_file(rel_path, content, vector)
+
+                # Update hash
+                self.hashes[rel_path] = current_hash
+                stats['added'] += 1
+
+            except Exception as e:
+                stats['failed'] += 1
                 if verbose:
-                    print(f"\n\nDone. Added: {stats['added']}, Skipped: {stats['skipped']}, Failed: {stats['failed']}", file=sys.stderr)
-                return stats
+                    print(f"\nError processing {rel_path}: {e}", file=sys.stderr)
+
+        # 3. Finalize
+        self.rag_db.persist()
+        self._save_hashes()
+
+        if verbose:
+            print(f"\n\nDone. Added: {stats['added']}, Skipped: {stats['skipped']}, Failed: {stats['failed']}", file=sys.stderr)
+
+        return stats
