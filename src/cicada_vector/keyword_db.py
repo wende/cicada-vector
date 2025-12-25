@@ -28,8 +28,8 @@ class KeywordDB:
         """Load index from JSON file."""
         with open(self.storage_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            # Convert lists back to sets
-            self.index = {k: set(v) for k, v in data.items()}
+            # Convert lists back to sets and restore defaultdict
+            self.index = defaultdict(set, {k: set(v) for k, v in data.items()})
 
     def add(self, id: str, text: str):
         """Add document text to index."""
