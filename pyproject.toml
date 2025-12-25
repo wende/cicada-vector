@@ -19,6 +19,9 @@ classifiers = [
 ]
 dependencies = []
 
+[project.scripts]
+cicada-vec = "cli:main"
+
 [project.optional-dependencies]
 numpy = ["numpy"]
 
