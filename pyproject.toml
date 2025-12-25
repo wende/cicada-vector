@@ -21,9 +21,11 @@ dependencies = []
 
 [project.scripts]
 cicada-vec = "cli:main"
+cicada-vec-server = "cicada_vector.mcp:main"
 
 [project.optional-dependencies]
 numpy = ["numpy"]
+server = ["mcp>=0.1.0"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cicada_vector"]

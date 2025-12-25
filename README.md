@@ -19,6 +19,9 @@ Most vector databases (Chroma, Milvus, Qdrant) are built for "Billion-Scale" pro
 *   **JSONL Storage:** Human-readable, append-only persistence.
 *   **Progressive Engine:** Pure Python loops by default, automatic Numpy acceleration if present.
 *   **Simple API:** `add()`, `search()`, `persist()`.
+*   **Model Agnostic:** Works with ANY embedding provider (Ollama, OpenAI, HuggingFace, etc.) - it just stores lists of floats.
+*   **Hybrid Search:** Combines Vector semantic search with exact Keyword matching (RRF).
+*   **RAG:** "Search & Scan" logic for retrieving specific code snippets.
 
 ## Quick Start
 
@@ -36,6 +39,38 @@ results = db.search([0.1, 0.2, 0.2], k=1)
 for id, score, meta in results:
     print(f"Found {id} with score {score}")
 ```
+
+## MCP Server (Model Context Protocol)
+
+Cicada Vector includes a built-in MCP server, allowing AI assistants (Claude, Cursor, Gemini) to search your vectors directly.
+
+**Installation:**
+```bash
+pip install 'cicada-vector[server]'
+```
+
+**Usage:**
+```bash
+# Start the server (stdio mode)
+export CICADA_HYBRID_DIR=./my_db
+cicada-vec-server
+```
+
+**Tools Exposed:**
+*   `search_vectors`: Pure semantic search.
+*   `search_hybrid`: Vector + Keyword search (Recommended).
+*   `search_code_context`: RAG search returning file snippets with line numbers.
+
+## Model Agnostic Design
+
+Cicada Vector treats embeddings as pure lists of numbers. It doesn't care where they come from. You can use:
+
+*   **Ollama:** Local, private, free. (Recommended: `nomic-embed-text`)
+*   **OpenAI:** `text-embedding-3-small` / `large`.
+*   **HuggingFace:** `sentence-transformers/all-MiniLM-L6-v2`.
+*   **Cohere:** `embed-english-v3.0`.
+
+The library automatically adapts to the dimensionality of your vectors (e.g., 768 for Nomic, 1536 for OpenAI).
 
 ## End-to-End with Ollama
 
