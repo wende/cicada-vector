@@ -60,17 +60,68 @@ And set the environment variable `CICADA_HYBRID_DIR` to your database path.
 ```python
 from cicada_vector import Store
 
-# Initialize
+# Initialize (embeddings handled automatically via Ollama)
 db = Store("./my_knowledge_base")
 
-# Add data (get vector from Ollama/OpenAI)
-db.add(id="auth.py", vector=[...], text="def login()...", meta={"path": "..."})
+# Add data - just provide text, we handle embeddings
+db.add(id="auth.py", text="def login(username, password):\n    ...", meta={"path": "src/auth.py"})
+db.add(id="user.py", text="class User:\n    ...", meta={"path": "src/user.py"})
 
-# Search with confidence scores
-results = db.search(query_text="login", query_vector=[...], k=5)
+# Search - just provide query text, we handle embeddings
+results = db.search("how to authenticate users", k=5)
 for id, score, meta in results:
-    print(f"[{score:.4f}] Found {id}")
+    print(f"[{score:.4f}] {id}: {meta.get('path')}")
+
+# Custom embedding provider (optional)
+from cicada_vector import EmbeddingProvider
+
+class MyCustomEmbedder:
+    def embed(self, text: str) -> list[float]:
+        # Use OpenAI, HuggingFace, or any embedding service
+        return my_embedding_service(text)
+
+db = Store("./my_db", embedding_provider=MyCustomEmbedder())
 ```
+
+## Indexing Custom Data
+
+Cicada Vector isn't just for code files - index any text data:
+
+```python
+from cicada_vector import Store
+import subprocess
+import json
+
+# Example: Index git commits
+db = Store("./git_commits_db")
+
+result = subprocess.run(
+    ["git", "log", "--format=%H|%an|%s|%b", "-10"],
+    capture_output=True, text=True
+)
+
+for line in result.stdout.strip().split('\n'):
+    sha, author, subject, body = line.split('|', 3)
+    commit_text = f"{subject}\n{body}"
+
+    db.add(
+        id=sha,
+        text=commit_text,
+        meta={"author": author, "subject": subject, "type": "commit"}
+    )
+
+# Search commits
+results = db.search("authentication bug fix", k=5)
+for sha, score, meta in results:
+    print(f"[{score:.4f}] {sha[:8]} - {meta['subject']}")
+```
+
+**Use cases:**
+- Git commits and history
+- GitHub PRs and issues
+- Documentation sites
+- Support tickets
+- Any text corpus
 
 ## The Stack
 

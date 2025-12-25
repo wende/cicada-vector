@@ -6,15 +6,41 @@ import os
 import re
 from typing import List, Dict, Tuple, Optional
 from .hybrid import Store
+from .embeddings import EmbeddingProvider
 
 class VectorIndex:
-    def __init__(self, storage_dir: str):
-        self.db = Store(storage_dir)
+    def __init__(
+        self,
+        storage_dir: str,
+        embedding_provider: Optional[EmbeddingProvider] = None,
+        ollama_host: str = "http://localhost:11434",
+        ollama_model: str = "nomic-embed-text"
+    ):
+        """
+        Initialize RAG index.
 
-    def add_file(self, file_path: str, content: str, vector: List[float], meta: Optional[dict] = None):
+        Args:
+            storage_dir: Directory for storage files
+            embedding_provider: Custom embedding provider (if None, uses Ollama)
+            ollama_host: Ollama host (used if embedding_provider is None)
+            ollama_model: Ollama model (used if embedding_provider is None)
+        """
+        self.db = Store(
+            storage_dir,
+            embedding_provider=embedding_provider,
+            ollama_host=ollama_host,
+            ollama_model=ollama_model
+        )
+
+    def add_file(self, file_path: str, content: str, meta: Optional[dict] = None, vector: Optional[List[float]] = None):
         """
         Index a file.
-        vector: Embedding of the file's 'summary' or 'representation'.
+
+        Args:
+            file_path: Path to the file
+            content: File content to index
+            meta: Optional metadata
+            vector: Optional pre-computed vector (if None, will be computed from content)
         """
         doc_id = file_path
         # We index the full content keywords for the KeywordDB
@@ -23,8 +49,8 @@ class VectorIndex:
         metadata = meta or {}
         metadata["content"] = content
         metadata["file_path"] = file_path
-        
-        self.db.add(doc_id, vector, content, metadata)
+
+        self.db.add(doc_id, content, metadata, vector=vector)
 
     def persist(self):
         self.db.persist()
@@ -60,13 +86,21 @@ class VectorIndex:
         snippet = "\n".join(lines[best_start : best_start + window_size])
         return best_start + 1, snippet # 1-based indexing
 
-    def search(self, query: str, query_vector: List[float], k: int = 3) -> List[Dict]:
+    def search(self, query: str, k: int = 3, query_vector: Optional[List[float]] = None) -> List[Dict]:
         """
         1. Find relevant files (Vector + Keyword Search).
         2. Scan files for best line window.
+
+        Args:
+            query: Search query text
+            k: Number of results
+            query_vector: Optional pre-computed query vector (if None, will be computed from query)
+
+        Returns:
+            List of dicts with file, score, line, snippet, full_match
         """
         # 1. Broad Search
-        file_results = self.db.search(query, query_vector, k=k)
+        file_results = self.db.search(query, k=k, query_vector=query_vector)
         
         rag_results = []
         query_terms = re.findall(r"\w+", query)

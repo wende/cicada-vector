@@ -8,11 +8,11 @@ import json
 import os
 import sys
 import time
-import urllib.request
 from pathlib import Path
-from typing import Set, Dict, Optional, List
+from typing import Set, Dict, Optional
 
 from .rag import VectorIndex
+from .embeddings import EmbeddingProvider
 
 DEFAULT_EXTENSIONS = {'.py', '.ex', '.exs', '.md', '.json', '.toml', '.sh', '.rs', '.go', '.js', '.ts', '.tsx'}
 DEFAULT_EXCLUDE = {'.git', '.venv', '__pycache__', 'node_modules', '.pytest_cache', '.gemini', 'target', 'dist', 'build'}
@@ -21,13 +21,26 @@ class DirectoryIndexer:
     def __init__(
         self,
         storage_dir: str,
+        embedding_provider: Optional[EmbeddingProvider] = None,
         ollama_host: str = "http://localhost:11434",
         ollama_model: str = "nomic-embed-text"
     ):
+        """
+        Initialize directory indexer.
+
+        Args:
+            storage_dir: Directory for storage files
+            embedding_provider: Custom embedding provider (if None, uses Ollama)
+            ollama_host: Ollama host (used if embedding_provider is None)
+            ollama_model: Ollama model (used if embedding_provider is None)
+        """
         self.storage_dir = Path(storage_dir)
-        self.rag_db = VectorIndex(str(storage_dir))
-        self.ollama_host = ollama_host
-        self.ollama_model = ollama_model
+        self.rag_db = VectorIndex(
+            str(storage_dir),
+            embedding_provider=embedding_provider,
+            ollama_host=ollama_host,
+            ollama_model=ollama_model
+        )
 
         self.hashes_path = self.storage_dir / "file_hashes.json"
         self.hashes: Dict[str, str] = {}
@@ -47,21 +60,6 @@ class DirectoryIndexer:
 
     def _compute_hash(self, content: str) -> str:
         return hashlib.md5(content.encode('utf-8')).hexdigest()
-
-    def _get_embedding(self, text: str) -> List[float]:
-        url = f"{self.ollama_host}/api/embeddings"
-        data = {"model": self.ollama_model, "prompt": text}
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(data).encode("utf-8"),
-            headers={"Content-Type": "application/json"}
-        )
-        try:
-            with urllib.request.urlopen(req) as response:
-                result = json.loads(response.read().decode())
-                return result["embedding"]
-        except Exception as e:
-            raise RuntimeError(f"Ollama embedding failed: {e}")
 
     def index_directory(
         self,
@@ -119,12 +117,8 @@ class DirectoryIndexer:
                 if verbose:
                     print(f"\r[{i+1}/{len(files_to_process)}] Indexing {rel_path}...", end="", flush=True, file=sys.stderr)
 
-                # Representation: Path + content prefix
-                representation = f"File: {rel_path}\n\n{content[:1000]}"
-                vector = self._get_embedding(representation)
-
-                # Add to DB
-                self.rag_db.add_file(rel_path, content, vector)
+                # Add to DB (embedding handled internally by VectorIndex)
+                self.rag_db.add_file(rel_path, content)
 
                 # Update hash
                 self.hashes[rel_path] = current_hash
