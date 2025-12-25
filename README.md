@@ -1,79 +1,68 @@
-# Cicada Vector
+# Cicada Vector 🦗
 
-A "poor man's" vector database designed for absolute simplicity, zero dependencies, and developer-centric code exploration.
+**A lightweight semantic search engine for developers.**
 
-## Why reinvent the wheel?
+Cicada Vector is a simple, zero-dependency semantic search engine and RAG database. It explores a different approach to code intelligence: maximizing semantic awareness while minimizing complexity and dependencies.
 
-Most vector databases (Chroma, Milvus, Qdrant) are built for "Billion-Scale" problems. They come with heavy dependency trees (Torch, ONNX, FastAPI, Pydantic) and complex indexing graphs (HNSW).
+## Why this exists?
 
-**Cicada Vector is built on a different set of assumptions:**
+The original Cicada is powerful because it deeply *understands* code structure (SCIP, ASTs). However, that power often requires heavy dependencies and longer setup times.
 
-1.  **Scale is Finite:** A typical developer codebase has 1,000 to 100,000 symbols. At this scale, brute-force matrix multiplication is faster than the overhead of traversing complex graph indices.
-2.  **Dependencies are Bloat:** Developers shouldn't have to wait 5 minutes for `torch` to compile just to run a local code search tool. Cicada Vector has **zero dependencies** and runs on pure Python standard library.
-3.  **Local First:** It uses a simple, append-only JSONL format. You can open your database in a text editor, debug it, and move it around as a single file. No server required.
-4.  **Hybrid Acceleration:** While it works on pure Python out of the box, it will automatically detect and use `numpy` for a 50x speed boost if it's available in the environment.
+**Cicada Vector takes a complementary path:**
+It focuses on **Semantic Awareness** and ease of use. By combining local LLM embeddings (via Ollama) with a hybrid database, it provides robust search capabilities with a minimal footprint.
 
 ## Features
 
-*   **Zero Dependencies:** Standard Library only.
-*   **JSONL Storage:** Human-readable, append-only persistence.
-*   **Progressive Engine:** Pure Python loops by default, automatic Numpy acceleration if present.
-*   **Simple API:** `add()`, `search()`, `persist()`.
-*   **Model Agnostic:** Works with ANY embedding provider (Ollama, OpenAI, HuggingFace, etc.) - it just stores lists of floats.
-*   **Hybrid Search:** Combines Vector semantic search with exact Keyword matching (RRF).
-*   **RAG:** "Search & Scan" logic for retrieving specific code snippets.
+*   **Lightweight:** Minimal Python codebase. **Zero dependencies** (Standard Library only) for the core engine.
+*   **Instant Install:** No waiting for heavy ML libraries to compile.
+*   **Semantic Intelligence:** Understands *intent*. Searching for "auth" finds login logic, even if the word "auth" isn't present.
+*   **Hybrid Search:** Combines Vector semantic search with Keyword exact matching. It won't miss specific identifiers like `UserAuth_v2`.
+*   **Simple RAG:** A "Search Broad -> Scan Specific" pipeline that pinpoints relevant code snippets.
+*   **MCP Ready:** Built-in Model Context Protocol server for immediate use with Claude Code, Cursor, and Gemini.
+
+## Why reinvent the wheel?
+
+Most vector databases are built for "Billion-Scale" problems.
+**Cicada Vector is built for local development:**
+
+1.  **Finite Scale:** For < 100,000 symbols, simple matrix operations are often faster than complex graph indices.
+2.  **Local First:** human-readable JSONL storage. No server management required.
+3.  **Hybrid by Default:** Uses Reciprocal Rank Fusion (RRF) and Score Boosting to ensure exact matches surface alongside semantic matches.
 
 ## Quick Start
 
 ```python
-from cicada_vector import VectorDB
+from cicada_vector import HybridDB
 
 # Initialize
-db = VectorDB("my_vectors.jsonl")
+db = HybridDB("./my_knowledge_base")
 
-# Add a vector (e.g. from Ollama)
-db.add("doc_1", [0.1, 0.2, 0.3], {"text": "Hello world"})
+# Add data (get vector from Ollama/OpenAI)
+db.add(id="auth.py", vector=[...], text="def login()...", meta={"path": "..."})
 
-# Semantic search
-results = db.search([0.1, 0.2, 0.2], k=1)
+# Search with confidence scores
+results = db.search(query_text="login", query_vector=[...], k=5)
 for id, score, meta in results:
-    print(f"Found {id} with score {score}")
+    print(f"[{score:.4f}] Found {id}")
 ```
 
-## MCP Server (Model Context Protocol)
+## MCP Server
 
-Cicada Vector includes a built-in MCP server, allowing AI assistants (Claude, Cursor, Gemini) to search your vectors directly.
+AI assistants can use your local knowledge base directly:
 
-**Installation:**
 ```bash
 pip install 'cicada-vector[server]'
-```
-
-**Usage:**
-```bash
-# Start the server (stdio mode)
 export CICADA_HYBRID_DIR=./my_db
 cicada-vec-server
 ```
 
-**Tools Exposed:**
-*   `search_vectors`: Pure semantic search.
-*   `search_hybrid`: Vector + Keyword search (Recommended).
-*   `search_code_context`: RAG search returning file snippets with line numbers.
+**Tools:** `search_vectors`, `search_hybrid`, `search_code_context`, `index_directory`.
 
-## Model Agnostic Design
+## The Stack
 
-Cicada Vector treats embeddings as pure lists of numbers. It doesn't care where they come from. You can use:
+*   **Brains:** [Ollama](https://ollama.com/) (Recommended: `nomic-embed-text`)
+*   **Storage:** JSONL (Human-readable, append-only)
+*   **Engine:** Pure Python (with optional Numpy acceleration)
 
-*   **Ollama:** Local, private, free. (Recommended: `nomic-embed-text`)
-*   **OpenAI:** `text-embedding-3-small` / `large`.
-*   **HuggingFace:** `sentence-transformers/all-MiniLM-L6-v2`.
-*   **Cohere:** `embed-english-v3.0`.
-
-The library automatically adapts to the dimensionality of your vectors (e.g., 768 for Nomic, 1536 for OpenAI).
-
-## End-to-End with Ollama
-
-Cicada Vector is the perfect companion for [Ollama](https://ollama.com/). Combine them to build a full semantic search engine with zero `pip install` wait times.
-
-See `test_e2e_ollama.py` for a full example.
+---
+*Part of the Cicada suite. Simple, effective code intelligence.*
