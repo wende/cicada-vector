@@ -13,7 +13,7 @@ import urllib.request
 import urllib.error
 from typing import List, Optional
 
-from cicada_vector import VectorDB
+from cicada_vector import EmbeddingDB, DirectoryIndexer
 
 DEFAULT_OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 DEFAULT_MODEL = "nomic-embed-text"
@@ -66,7 +66,8 @@ def handle_index(args):
         print(f"Error: Could not connect to Ollama at {DEFAULT_OLLAMA_HOST}")
         sys.exit(1)
 
-    db = VectorDB(args.db)
+    db = EmbeddingDB(args.db)
+    rows = []
     rows = []
 
     print(f"Reading {args.file}...")
@@ -121,7 +122,8 @@ def handle_search(args):
         print(f"Error: Could not connect to Ollama at {DEFAULT_OLLAMA_HOST}")
         sys.exit(1)
 
-    db = VectorDB(args.db)
+    db = EmbeddingDB(args.db)
+    rows = []
     print(f"Loaded {len(db.vectors)} vectors from {args.db}")
     print(f"Query: '{args.query}' (Model: {args.model})")
     
@@ -145,6 +147,17 @@ def handle_search(args):
         print(f"Search failed: {e}")
         sys.exit(1)
 
+def handle_crawl(args):
+    """Crawl and index a directory."""
+    indexer = DirectoryIndexer(
+        args.db,
+        ollama_host=DEFAULT_OLLAMA_HOST,
+        ollama_model=args.model
+    )
+    print(f"Crawling {args.path}...")
+    stats = indexer.index_directory(args.path, verbose=True)
+    print(f"\n✅ Done. Added: {stats['added']}, Skipped: {stats['skipped']}, Failed: {stats['failed']}")
+
 def main():
     parser = argparse.ArgumentParser(description="Cicada Vector CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -163,6 +176,13 @@ def main():
     search_parser.add_argument("--model", default=DEFAULT_MODEL, help="Ollama model to use")
     search_parser.add_argument("-k", type=int, default=5, help="Number of results")
     search_parser.set_defaults(func=handle_search)
+
+    # Crawl Command
+    crawl_parser = subparsers.add_parser("crawl", help="Index a directory incrementally")
+    crawl_parser.add_argument("path", help="Directory to index")
+    crawl_parser.add_argument("--db", default="hybrid_db", help="Storage directory")
+    crawl_parser.add_argument("--model", default=DEFAULT_MODEL, help="Ollama model to use")
+    crawl_parser.set_defaults(func=handle_crawl)
 
     args = parser.parse_args()
     args.func(args)

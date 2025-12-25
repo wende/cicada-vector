@@ -13,7 +13,7 @@ from typing import List
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
-from cicada_vector import VectorDB
+from cicada_vector import EmbeddingDB
 
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_MODEL = "nomic-embed-text"
@@ -41,7 +41,7 @@ def main():
     if os.path.exists(VECTORS_PATH):
         os.remove(VECTORS_PATH)
 
-    db = VectorDB(VECTORS_PATH)
+    db = EmbeddingDB(VECTORS_PATH)
     
     print(f"Reading {CSV_PATH}...")
     

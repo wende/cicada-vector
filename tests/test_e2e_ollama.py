@@ -2,7 +2,7 @@ import json
 import os
 import unittest
 import urllib.request
-from cicada_vector import VectorDB
+from cicada_vector import EmbeddingDB
 
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 

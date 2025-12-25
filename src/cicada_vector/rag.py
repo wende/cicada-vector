@@ -5,11 +5,11 @@ Poor Man's RAG: Broad-to-Specific Search
 import os
 import re
 from typing import List, Dict, Tuple, Optional
-from .hybrid import HybridDB
+from .hybrid import Store
 
-class RagDB:
+class VectorIndex:
     def __init__(self, storage_dir: str):
-        self.db = HybridDB(storage_dir)
+        self.db = Store(storage_dir)
 
     def add_file(self, file_path: str, content: str, vector: List[float], meta: Optional[dict] = None):
         """

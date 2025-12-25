@@ -16,7 +16,7 @@ except ImportError:
     HAS_NUMPY = False
 
 
-class VectorDB:
+class EmbeddingDB:
     def __init__(self, storage_path: str):
         """
         Initialize the vector database.

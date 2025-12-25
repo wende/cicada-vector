@@ -14,7 +14,7 @@ from typing import List
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
-from cicada_vector import HybridDB
+from cicada_vector import Store
 
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_MODEL = "nomic-embed-text"
@@ -37,7 +37,7 @@ def main():
     if os.path.exists(STORAGE_DIR):
         shutil.rmtree(STORAGE_DIR)
 
-    db = HybridDB(STORAGE_DIR)
+    db = Store(STORAGE_DIR)
     
     print(f"Reading {CSV_PATH}...")
     rows = []

@@ -2,9 +2,9 @@ import os
 import shutil
 import unittest
 from typing import List
-from cicada_vector import HybridDB
+from cicada_vector import Store
 
-class TestHybridDB(unittest.TestCase):
+class TestStore(unittest.TestCase):
     def setUp(self):
         self.storage_dir = "test_hybrid_db"
         if os.path.exists(self.storage_dir):
@@ -20,7 +20,7 @@ class TestHybridDB(unittest.TestCase):
         return vec
 
     def test_hybrid_search(self):
-        db = HybridDB(self.storage_dir)
+        db = Store(self.storage_dir)
         db.add("doc_1", self._mock_embedding("python"), "python", {"text": "python"})
         
         results = db.search("python", self._mock_embedding("python"), k=1)

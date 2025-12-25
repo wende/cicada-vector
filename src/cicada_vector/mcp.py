@@ -12,11 +12,18 @@ from typing import List, Optional
 try:
     from mcp.server.fastmcp import FastMCP
 except ImportError:
-    raise ImportError("MCP server dependencies not installed. Run: pip install 'cicada-vector[server]'" )
+    msg = (
+        "MCP server dependencies not installed.\n"
+        "  - If using pip: pip install 'cicada-vector[server]'\n"
+        "  - If using uv run: uv run --extra server cicada-vec-server\n"
+        "  - If using uvx: uvx --from 'cicada-vector[server]' cicada-vec-server"
+    )
+    raise ImportError(msg)
 
-from .db import VectorDB
-from .hybrid import HybridDB
-from .rag import RagDB
+from .db import EmbeddingDB
+from .hybrid import Store
+from .rag import VectorIndex
+from .indexer import DirectoryIndexer
 
 # Configuration
 DB_PATH = os.environ.get("CICADA_VECTOR_DB", "vectors.jsonl")
@@ -41,6 +48,25 @@ def get_embedding(text: str) -> List[float]:
         return result["embedding"]
 
 @mcp.tool()
+def index_directory(path: str) -> str:
+    """
+    Incrementally index a directory into the database.
+    
+    Args:
+        path: Absolute path to the directory to index.
+    """
+    try:
+        indexer = DirectoryIndexer(
+            HYBRID_DIR,
+            ollama_host=OLLAMA_HOST,
+            ollama_model=OLLAMA_MODEL
+        )
+        stats = indexer.index_directory(path)
+        return f"Indexing complete: {stats['added']} added, {stats['skipped']} skipped, {stats['failed']} failed."
+    except Exception as e:
+        return f"Indexing failed: {e}"
+
+@mcp.tool()
 def search_vectors(query: str, k: int = 5) -> str:
     """
     Search for similar items using pure vector semantic search.
@@ -54,7 +80,7 @@ def search_vectors(query: str, k: int = 5) -> str:
         return f"Error: Vector DB not found at {DB_PATH}"
         
     try:
-        db = VectorDB(DB_PATH)
+        db = EmbeddingDB(DB_PATH)
         query_vec = get_embedding(query)
         results = db.search(query_vec, k=k)
         
@@ -82,7 +108,7 @@ def search_hybrid(query: str, k: int = 5) -> str:
         return f"Error: Hybrid DB directory not found at {HYBRID_DIR}"
         
     try:
-        db = HybridDB(HYBRID_DIR)
+        db = Store(HYBRID_DIR)
         query_vec = get_embedding(query)
         # Pass query text for keyword search, vector for semantic
         results = db.search(query, query_vec, k=k)
@@ -111,7 +137,7 @@ def search_code_context(query: str, k: int = 3) -> str:
         return f"Error: Hybrid/RAG DB directory not found at {HYBRID_DIR}"
         
     try:
-        db = RagDB(HYBRID_DIR)
+        db = VectorIndex(HYBRID_DIR)
         query_vec = get_embedding(query)
         results = db.search(query, query_vec, k=k)
         

@@ -12,7 +12,7 @@ import urllib.request
 from pathlib import Path
 from typing import Set, Dict, Optional, List
 
-from .rag import RagDB
+from .rag import VectorIndex
 
 DEFAULT_EXTENSIONS = {'.py', '.ex', '.exs', '.md', '.json', '.toml', '.sh', '.rs', '.go', '.js', '.ts', '.tsx'}
 DEFAULT_EXCLUDE = {'.git', '.venv', '__pycache__', 'node_modules', '.pytest_cache', '.gemini', 'target', 'dist', 'build'}
@@ -25,7 +25,7 @@ class DirectoryIndexer:
         ollama_model: str = "nomic-embed-text"
     ):
         self.storage_dir = Path(storage_dir)
-        self.rag_db = RagDB(str(storage_dir))
+        self.rag_db = VectorIndex(str(storage_dir))
         self.ollama_host = ollama_host
         self.ollama_model = ollama_model
 

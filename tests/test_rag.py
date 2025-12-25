@@ -1,9 +1,9 @@
 import os
 import shutil
 import unittest
-from cicada_vector import RagDB
+from cicada_vector import VectorIndex
 
-class TestRagDB(unittest.TestCase):
+class TestVectorIndex(unittest.TestCase):
     def setUp(self):
         self.storage_dir = "test_rag_db"
         if os.path.exists(self.storage_dir):
@@ -14,7 +14,7 @@ class TestRagDB(unittest.TestCase):
             shutil.rmtree(self.storage_dir)
 
     def test_search_and_scan(self):
-        db = RagDB(self.storage_dir)
+        db = VectorIndex(self.storage_dir)
         content = "def login():\n    return True"
         db.add_file("auth.py", content, [1.0]*10)
         

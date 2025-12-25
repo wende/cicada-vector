@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 from cicada_vector.indexer import DirectoryIndexer
-from cicada_vector.rag import RagDB
+from cicada_vector.rag import VectorIndex
 
 DEFAULT_OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", "nomic-embed-text")
@@ -64,7 +64,7 @@ def main():
             print(f"Warning: Indexing failed ({e}). Searching existing data...", file=sys.stderr)
 
     # 2. Search
-    db = RagDB(str(storage_dir))
+    db = VectorIndex(str(storage_dir))
     
     # Get query embedding
     try:

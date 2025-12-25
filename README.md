@@ -33,29 +33,35 @@ It automatically indexes changed files in the background and searches instantly.
 
 AI assistants can use your local knowledge base directly:
 
-**Using uvx (Recommended):**
-```bash
-# Start the server (stdio mode)
-export CICADA_HYBRID_DIR=./my_db
-uvx --from cicada-vector cicada-vec-server
-```
-
-**Using pip:**
 ```bash
 pip install 'cicada-vector[server]'
-export CICADA_HYBRID_HYBRID_DIR=./my_db
+export CICADA_HYBRID_DIR=./my_db
 cicada-vec-server
 ```
 
-**Tools:** `search_vectors`, `search_hybrid`, `search_code_context`, `index_directory`.
+**Tools:**
+*   `search_vectors`: Pure semantic search.
+*   `search_hybrid`: Vector + Keyword search (Recommended).
+*   `search_code_context`: RAG search returning file snippets with line numbers.
+*   `index_directory`: Incrementally index a local directory into the database.
+
+**Configuration:**
+If using `uv` or `uvx`, ensure you include the `[server]` extra:
+```bash
+uv tool install "cicada-vector[server]"
+```
+
+For manual configuration (e.g., in Claude Desktop or Gemini), set the command to:
+`uvx --from "cicada-vector[server]" cicada-vec-server`
+And set the environment variable `CICADA_HYBRID_DIR` to your database path.
 
 ## Quick Start
 
 ```python
-from cicada_vector import HybridDB
+from cicada_vector import Store
 
 # Initialize
-db = HybridDB("./my_knowledge_base")
+db = Store("./my_knowledge_base")
 
 # Add data (get vector from Ollama/OpenAI)
 db.add(id="auth.py", vector=[...], text="def login()...", meta={"path": "..."})

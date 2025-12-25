@@ -4,16 +4,16 @@ Hybrid Database: Merges Vector and Keyword search results.
 
 import os
 from typing import List, Tuple, Dict, Any, Optional
-from .db import VectorDB
+from .db import EmbeddingDB
 from .keyword_db import KeywordDB
 
-class HybridDB:
+class Store:
     def __init__(self, storage_dir: str):
         self.storage_dir = storage_dir
         if not os.path.exists(storage_dir):
             os.makedirs(storage_dir)
             
-        self.vector_db = VectorDB(os.path.join(storage_dir, "vectors.jsonl"))
+        self.vector_db = EmbeddingDB(os.path.join(storage_dir, "vectors.jsonl"))
         self.keyword_db = KeywordDB(os.path.join(storage_dir, "keywords.json"))
 
     def add(self, id: str, vector: List[float], text: str, meta: Optional[dict] = None):
