@@ -18,16 +18,23 @@ It focuses on **Semantic Awareness** and ease of use. By combining local LLM emb
 *   **Semantic Intelligence:** Understands *intent*. Searching for "auth" finds login logic, even if the word "auth" isn't present.
 *   **Hybrid Search:** Combines Vector semantic search with Keyword exact matching. It won't miss specific identifiers like `UserAuth_v2`.
 *   **Simple RAG:** A "Search Broad -> Scan Specific" pipeline that pinpoints relevant code snippets.
-*   **MCP Ready:** Built-in Model Context Protocol server for immediate use with Claude Code, Cursor, and Gemini.
+*   **MCP Ready:** Built-in Model Context Protocol server for immediate use with AI assistants.
 
-## Why reinvent the wheel?
+## Tools
 
-Most vector databases are built for "Billion-Scale" problems.
-**Cicada Vector is built for local development:**
+### 1. `cigrep` (Zero-config Semantic Search)
+The fastest way to search your code semantically. No setup needed.
+```bash
+cigrep "how do I handle authentication"
+```
+It automatically indexes changed files in the background and searches instantly.
 
-1.  **Finite Scale:** For < 100,000 symbols, simple matrix operations are often faster than complex graph indices.
-2.  **Local First:** human-readable JSONL storage. No server management required.
-3.  **Hybrid by Default:** Uses Reciprocal Rank Fusion (RRF) and Score Boosting to ensure exact matches surface alongside semantic matches.
+### 2. MCP Server
+Connect your local knowledge base to Claude Code, Cursor, or Gemini:
+```bash
+export CICADA_HYBRID_DIR=./my_db
+cicada-vec-server
+```
 
 ## Quick Start
 
@@ -45,18 +52,6 @@ results = db.search(query_text="login", query_vector=[...], k=5)
 for id, score, meta in results:
     print(f"[{score:.4f}] Found {id}")
 ```
-
-## MCP Server
-
-AI assistants can use your local knowledge base directly:
-
-```bash
-pip install 'cicada-vector[server]'
-export CICADA_HYBRID_DIR=./my_db
-cicada-vec-server
-```
-
-**Tools:** `search_vectors`, `search_hybrid`, `search_code_context`, `index_directory`.
 
 ## The Stack
 

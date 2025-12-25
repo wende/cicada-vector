@@ -9,7 +9,7 @@ import urllib.request
 from typing import List
 
 # Add src to path
-sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from cicada_vector import VectorDB
 
@@ -31,28 +31,17 @@ def get_embedding(text: str) -> List[float]:
 
 def main():
     if not os.path.exists(VECTORS_PATH):
-        print(f"Error: Vectors not found at {VECTORS_PATH}. Run embed_cicada.py first.")
+        print(f"Error: Vectors not found.")
         return
 
     db = VectorDB(VECTORS_PATH)
+    q = "scoring"
+    print(f"Querying for: '{q}'...")
+    q_vec = get_embedding(q)
+    results = db.search(q_vec, k=3)
     
-    print(f"Loaded {len(db.vectors)} vectors.")
-    
-    queries = [
-        "How do we handle scoring and ranking?",
-        "Setting up the interactive CLI menu",
-        "Finding unused or dead code",
-        "Extracting function calls from elixir code",
-    ]
-
-    for q in queries:
-        print(f"\nQuery: '{q}'")
-        q_vec = get_embedding(q)
-        results = db.search(q_vec, k=3)
-        
-        for id, score, meta in results:
-            print(f"  [{score:.4f}] {id}")
-            print(f"    File: {meta['file']}:{meta['line']}")
+    for id, score, meta in results:
+        print(f"  [{score:.4f}] {id}")
 
 if __name__ == "__main__":
     main()
