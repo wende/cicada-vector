@@ -193,16 +193,23 @@ class GitIndexer:
 
                 if include_diff:
                     diff = self._get_commit_diff(repo, sha)
-                    # Limit diff size to avoid embedding errors (max ~8000 chars)
-                    if len(diff) > 8000:
-                        diff = diff[:8000] + "\n... (diff truncated)"
                     text_parts.append(diff)
 
                 full_text = '\n\n'.join(filter(None, text_parts))
 
                 # Limit total text size for embedding
-                if len(full_text) > 10000:
-                    full_text = full_text[:10000] + "\n... (content truncated)"
+                # nomic-embed-text has ~512 token limit (~1000 chars to be safe)
+                MAX_CHARS = 900
+                if len(full_text) > MAX_CHARS:
+                    # Try to keep subject intact, truncate body/diff
+                    if len(commit['subject']) < MAX_CHARS // 2:
+                        # Keep subject + partial body/diff
+                        remaining = MAX_CHARS - len(commit['subject']) - 10
+                        truncated_rest = (commit['body'] + '\n\n' + (diff if include_diff else ''))[:remaining]
+                        full_text = f"{commit['subject']}\n\n{truncated_rest}\n... (truncated)"
+                    else:
+                        # Even subject is too long, just truncate everything
+                        full_text = full_text[:MAX_CHARS] + "\n... (truncated)"
 
                 # Add to index
                 self.rag_db.add_file(

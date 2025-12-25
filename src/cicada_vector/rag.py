@@ -50,7 +50,16 @@ class VectorIndex:
         metadata["content"] = content
         metadata["file_path"] = file_path
 
-        self.db.add(doc_id, content, metadata, vector=vector)
+        # Truncate content for embedding if needed
+        # nomic-embed-text has ~512 token limit (~1000 chars to be safe)
+        MAX_CHARS = 900
+        embed_content = content
+        if len(content) > MAX_CHARS:
+            # For embedding, use file path + beginning of content
+            # This gives the model context about what the file is
+            embed_content = f"File: {file_path}\n\n{content[:MAX_CHARS - len(file_path) - 10]}"
+
+        self.db.add(doc_id, embed_content, metadata, vector=vector)
 
     def persist(self):
         self.db.persist()
