@@ -1,5 +1,5 @@
 """
-cigrep: Zero-config Semantic Grep.
+cigrep: Zero-config Semantic File Search.
 Usage: cigrep "query string" [path]
 """
 
@@ -22,8 +22,8 @@ def get_project_hash(path: Path) -> str:
     return hashlib.md5(str(path).encode("utf-8")).hexdigest()
 
 def main():
-    parser = argparse.ArgumentParser(description="cigrep: Semantic search for your code.")
-    parser.add_argument("query", help="Search query (e.g. 'auth logic' or 'how do I login')")
+    parser = argparse.ArgumentParser(description="cigrep: Semantic search for text files (code, docs, configs, etc.)")
+    parser.add_argument("query", help="Search query (e.g., 'auth logic', 'installation steps', 'database config')")
     parser.add_argument("path", nargs="?", default=".", help="Directory to search (default: .)")
     parser.add_argument("-k", type=int, default=5, help="Number of results")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="Ollama model")

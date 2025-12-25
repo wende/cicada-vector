@@ -1,32 +1,34 @@
 # Cicada Vector 🦗
 
-**A lightweight semantic search engine for developers.**
+**A lightweight semantic search engine for text files.**
 
-Cicada Vector is a simple, zero-dependency semantic search engine and RAG database. It explores a different approach to code intelligence: maximizing semantic awareness while minimizing complexity and dependencies.
+Cicada Vector is a simple, zero-dependency semantic search engine and RAG database. Search any text content semantically - code, documentation, commits, or custom data.
 
 ## Why this exists?
 
 The original Cicada is powerful because it deeply *understands* code structure (SCIP, ASTs). However, that power often requires heavy dependencies and longer setup times.
 
 **Cicada Vector takes a complementary path:**
-It focuses on **Semantic Awareness** and ease of use. By combining local LLM embeddings (via Ollama) with a hybrid database, it provides robust search capabilities with a minimal footprint.
+It focuses on **Semantic Awareness** for any text content. By combining local LLM embeddings (via Ollama) with a hybrid database, it provides robust search capabilities with a minimal footprint and maximum flexibility.
 
 ## Features
 
 *   **Lightweight:** Minimal Python codebase. **Zero dependencies** (Standard Library only) for the core engine.
 *   **Instant Install:** No waiting for heavy ML libraries to compile.
 *   **Semantic Intelligence:** Understands *intent*. Searching for "auth" finds login logic, even if the word "auth" isn't present.
-*   **Hybrid Search:** Combines Vector semantic search with Keyword exact matching. It won't miss specific identifiers like `UserAuth_v2`.
-*   **Simple RAG:** A "Search Broad -> Scan Specific" pipeline that pinpoints relevant code snippets.
+*   **Hybrid Search:** Combines Vector semantic search with Keyword exact matching. Won't miss exact terms while understanding meaning.
+*   **Simple RAG:** A "Search Broad -> Scan Specific" pipeline that pinpoints relevant content snippets.
+*   **Universal:** Works on code, docs, commits, configs - any text content.
 *   **MCP Ready:** Built-in Model Context Protocol server for immediate use with AI assistants.
 
 ## Tools
 
-### 1. `cigrep` (Semantic Code Search)
-The fastest way to search your code semantically. No setup needed.
+### 1. `cigrep` (Semantic File Search)
+Zero-config semantic search for any text files - code, docs, configs, anything.
 ```bash
-cigrep "how do I handle authentication"
-cigrep "database connection" src/
+cigrep "how do I handle authentication"     # Search code
+cigrep "installation steps" docs/           # Search docs
+cigrep "database config" .                  # Search everything
 ```
 Automatically indexes changed files in the background and searches instantly.
 
@@ -127,9 +129,11 @@ for sha, score, meta in results:
 ```
 
 **Use cases:**
+- Code files (semantic search across your codebase)
 - Git commits and history
 - GitHub PRs and issues
 - Documentation sites
+- Configuration files
 - Support tickets
 - Any text corpus
 
@@ -140,4 +144,4 @@ for sha, score, meta in results:
 *   **Engine:** Pure Python (with optional Numpy acceleration)
 
 ---
-*Part of the Cicada suite. Simple, effective code intelligence.*
+*Part of the Cicada suite. Simple, effective semantic search for text.*

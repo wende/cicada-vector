@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "cicada-vector"
 version = "0.1.2"
-description = "A poor man's vector database for Python. Zero dependencies, JSONL storage."
+description = "Lightweight semantic search engine for text files. Zero dependencies, JSONL storage."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
