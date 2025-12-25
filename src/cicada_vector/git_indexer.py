@@ -156,6 +156,8 @@ class GitIndexer:
             raise FileNotFoundError(f"Not a git repository: {repo}")
 
         stats = {'added': 0, 'skipped': 0, 'failed': 0}
+        consecutive_failures = 0
+        MAX_CONSECUTIVE_FAILURES = 3
 
         if verbose:
             print(f"Fetching commits from {repo}...", file=sys.stderr)
@@ -220,11 +222,29 @@ class GitIndexer:
 
                 self.indexed_commits[sha] = commit['date']
                 stats['added'] += 1
+                consecutive_failures = 0  # Reset on success
 
             except Exception as e:
                 stats['failed'] += 1
+                consecutive_failures += 1
+
                 if verbose:
                     print(f"\nError indexing {sha[:8]}: {e}", file=sys.stderr)
+
+                # Stop if we hit too many consecutive failures (likely Ollama issue)
+                if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                    error_msg = f"\nStopped after {consecutive_failures} consecutive embedding failures.\n"
+                    if "500" in str(e) or "Internal Server Error" in str(e):
+                        error_msg += "Ollama returned HTTP 500 errors. This usually means:\n"
+                        error_msg += "  - Text is too long for embedding (try --no-diff mode)\n"
+                        error_msg += "  - Ollama model is having issues (try: ollama pull nomic-embed-text)\n"
+                    elif "Connection" in str(e) or "refused" in str(e):
+                        error_msg += "Cannot connect to Ollama. Is it running? (ollama serve)\n"
+                    else:
+                        error_msg += f"Error: {e}\n"
+
+                    print(error_msg, file=sys.stderr)
+                    break
 
         # Save state
         self.rag_db.persist()

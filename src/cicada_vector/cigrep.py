@@ -52,30 +52,39 @@ def main():
     
     # 1. Incremental Index (unless skipped)
     if not args.no_index:
-        if args.verbose:
-            print(f"Checking index for {target_path}...", file=sys.stderr)
-            
+        # Always show we're indexing (even if not verbose)
+        print(f"Indexing {target_path}...", file=sys.stderr, end='', flush=True)
+
         try:
             stats = indexer.index_directory(target_path, verbose=args.verbose)
-            if args.verbose or stats['added'] > 0:
-                print(f"Index updated: +{stats['added']} files, {stats['skipped']} skipped.", file=sys.stderr)
+
+            # Clear the "Indexing..." line if not verbose
+            if not args.verbose:
+                print(f"\r", end='', file=sys.stderr)
+
+            # Always show result (brief if not verbose)
+            if args.verbose:
+                print(f"Index updated: +{stats['added']} files, {stats['skipped']} skipped, {stats['failed']} failed.", file=sys.stderr)
+            elif stats['added'] > 0:
+                print(f"Indexed {stats['added']} new files.", file=sys.stderr)
+            # If 0 added, don't print anything (already up to date, silent)
+
         except Exception as e:
+            # Clear the "Indexing..." line
+            print(f"\r", end='', file=sys.stderr)
             # If Ollama fails, we might still want to search existing index
             print(f"Warning: Indexing failed ({e}). Searching existing data...", file=sys.stderr)
 
     # 2. Search
-    db = VectorIndex(str(storage_dir))
-    
-    # Get query embedding
+    db = VectorIndex(str(storage_dir), ollama_host=DEFAULT_OLLAMA_HOST, ollama_model=args.model)
+
+    # Search (embedding handled internally by VectorIndex)
     try:
-        # We reuse the private method from indexer for convenience/consistency
-        query_vec = indexer._get_embedding(args.query)
+        results = db.search(args.query, k=args.k)
     except Exception as e:
-        print(f"Error: Could not embed query: {e}", file=sys.stderr)
+        print(f"Error: Could not search: {e}", file=sys.stderr)
         print("Is Ollama running?", file=sys.stderr)
         sys.exit(1)
-        
-    results = db.search(args.query, query_vec, k=args.k)
     
     if not results:
         print("No matches found.")

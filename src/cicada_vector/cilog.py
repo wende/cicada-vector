@@ -68,8 +68,8 @@ def main():
 
     # 1. Index commits (unless skipped)
     if not args.no_index:
-        if args.verbose:
-            print(f"Indexing commits from {repo_path}...", file=sys.stderr)
+        # Always show we're indexing (even if not verbose)
+        print(f"Indexing commits from {repo_path}...", file=sys.stderr, end='', flush=True)
 
         try:
             stats = indexer.index_repository(
@@ -79,9 +79,21 @@ def main():
                 include_diff=args.with_diff,
                 verbose=args.verbose
             )
-            if args.verbose or stats['added'] > 0:
-                print(f"Index updated: +{stats['added']} commits, {stats['skipped']} skipped.", file=sys.stderr)
+
+            # Clear the "Indexing..." line if not verbose
+            if not args.verbose:
+                print(f"\r", end='', file=sys.stderr)
+
+            # Always show result (brief if not verbose)
+            if args.verbose:
+                print(f"Index updated: +{stats['added']} commits, {stats['skipped']} skipped, {stats['failed']} failed.", file=sys.stderr)
+            elif stats['added'] > 0:
+                print(f"Indexed {stats['added']} new commits.", file=sys.stderr)
+            # If 0 added, don't print anything (already up to date, silent)
+
         except Exception as e:
+            # Clear the "Indexing..." line
+            print(f"\r", end='', file=sys.stderr)
             print(f"Warning: Indexing failed ({e}). Searching existing data...", file=sys.stderr)
 
     # 2. Search

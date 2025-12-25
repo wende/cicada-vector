@@ -77,6 +77,8 @@ class DirectoryIndexer:
             raise FileNotFoundError(f"Path {root} does not exist")
 
         stats = {'added': 0, 'skipped': 0, 'failed': 0}
+        consecutive_failures = 0
+        MAX_CONSECUTIVE_FAILURES = 3
 
         files_to_process = []
 
@@ -123,11 +125,29 @@ class DirectoryIndexer:
                 # Update hash
                 self.hashes[rel_path] = current_hash
                 stats['added'] += 1
+                consecutive_failures = 0  # Reset on success
 
             except Exception as e:
                 stats['failed'] += 1
+                consecutive_failures += 1
+
                 if verbose:
                     print(f"\nError processing {rel_path}: {e}", file=sys.stderr)
+
+                # Stop if we hit too many consecutive failures (likely Ollama issue)
+                if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                    error_msg = f"\nStopped after {consecutive_failures} consecutive embedding failures.\n"
+                    if "500" in str(e) or "Internal Server Error" in str(e):
+                        error_msg += "Ollama returned HTTP 500 errors. This usually means:\n"
+                        error_msg += "  - File content is too long for embedding\n"
+                        error_msg += "  - Ollama model is having issues (try: ollama pull nomic-embed-text)\n"
+                    elif "Connection" in str(e) or "refused" in str(e):
+                        error_msg += "Cannot connect to Ollama. Is it running? (ollama serve)\n"
+                    else:
+                        error_msg += f"Error: {e}\n"
+
+                    print(error_msg, file=sys.stderr)
+                    break
 
         # 3. Finalize
         self.rag_db.persist()
