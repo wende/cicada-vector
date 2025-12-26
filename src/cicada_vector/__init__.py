@@ -1,18 +1,21 @@
-from .db import EmbeddingDB
+from .db import VectorDB, EmbeddingDB
 from .keyword_db import KeywordDB
-from .hybrid import Store
-from .rag import VectorIndex
-from .indexer import DirectoryIndexer
-from .git_indexer import GitIndexer
+from .hybrid import Store, HybridDB
+from .rag import VectorIndex, RagDB
 from .embeddings import EmbeddingProvider, OllamaEmbedding
 
 __all__ = [
+    # Core databases
+    "VectorDB",
     "EmbeddingDB",
     "KeywordDB",
+    # Hybrid search
     "Store",
+    "HybridDB",  # backwards compat
+    # RAG
     "VectorIndex",
-    "DirectoryIndexer",
-    "GitIndexer",
+    "RagDB",  # backwards compat
+    # Embeddings
     "EmbeddingProvider",
     "OllamaEmbedding",
 ]

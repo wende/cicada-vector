@@ -188,3 +188,7 @@ class EmbeddingDB:
             results.append((self.ids[idx], score, self.metadata[idx]))
             
         return results
+
+
+# Backwards compatibility alias
+VectorDB = EmbeddingDB
