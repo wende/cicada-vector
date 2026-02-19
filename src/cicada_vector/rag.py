@@ -52,6 +52,14 @@ class VectorIndex:
             vector: Optional pre-computed vector (if None, will be computed from embed_text or content)
             embed_text: Optional text for embedding (if None, will auto-truncate content)
         """
+        # Backwards compatibility:
+        # Historical signature was add_file(file_path, content, vector, meta=None, embed_text=None).
+        if isinstance(meta, list) and all(isinstance(x, (int, float)) for x in meta):
+            legacy_vector = meta
+            legacy_meta = vector if isinstance(vector, dict) else None
+            meta = legacy_meta
+            vector = legacy_vector
+
         metadata = meta or {}
         metadata["content"] = content
         metadata["file_path"] = file_path
@@ -210,7 +218,7 @@ class VectorIndex:
         # Return top chunks (just the best one for now)
         return scored_chunks[:1]
 
-    def search(self, query: str, k: int = 3, query_vector: Optional[List[float]] = None) -> List[Dict]:
+    def search(self, query: str, query_vector: Optional[List[float]] = None, k: int = 3) -> List[Dict]:
         """
         Two-level search:
         1. Broad Search: Find relevant files (file-level embeddings + keywords)
@@ -224,6 +232,12 @@ class VectorIndex:
         Returns:
             List of dicts with file, score, line, snippet, full_match
         """
+        # Backwards compatibility:
+        # Historical signature was search(query, query_vector, k=3).
+        if isinstance(k, list) and all(isinstance(x, (int, float)) for x in k):
+            query_vector = k
+            k = 3
+
         # Get query embedding if not provided
         if query_vector is None:
             query_vector = self.db.embedder.embed(query)

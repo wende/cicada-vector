@@ -50,6 +50,16 @@ class Store:
             vector: Optional pre-computed vector (if None, will be computed from embed_text or text)
             embed_text: Optional text to use for embedding (if different from text, e.g., truncated)
         """
+        # Backwards compatibility:
+        # Historical signature was add(id, vector, text, meta).
+        if isinstance(text, list) and all(isinstance(x, (int, float)) for x in text):
+            legacy_vector = text
+            legacy_text = meta if isinstance(meta, str) else ""
+            legacy_meta = vector if isinstance(vector, dict) else None
+            vector = legacy_vector
+            text = legacy_text
+            meta = legacy_meta
+
         # Get embedding if not provided
         if vector is None:
             # Use embed_text for embedding if provided, otherwise use full text
@@ -114,7 +124,7 @@ class Store:
 
         return final_results
 
-    def search(self, query_text: str, k: int = 5, query_vector: Optional[List[float]] = None) -> List[Tuple[str, float, dict]]:
+    def search(self, query_text: str, query_vector: Optional[List[float]] = None, k: int = 5) -> List[Tuple[str, float, dict]]:
         """
         Perform hybrid search.
 
@@ -123,6 +133,12 @@ class Store:
             k: Number of results
             query_vector: Optional pre-computed query embedding
         """
+        # Backwards compatibility:
+        # Historical signature was search(query_text, query_vector, k=5).
+        if isinstance(k, list) and all(isinstance(x, (int, float)) for x in k):
+            query_vector = k
+            k = 5
+
         # Get query embedding if not provided
         if query_vector is None:
             query_vector = self.embedder.embed(query_text)
