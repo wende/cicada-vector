@@ -21,6 +21,15 @@ It focuses on **Semantic Awareness** for any text content. By combining local LL
 *   **Universal:** Works on code, docs, commits, configs - any text content.
 *   **MCP Ready:** Built-in Model Context Protocol server for immediate use with AI assistants.
 
+## Database Classes
+
+Cicada Vector provides four database classes:
+
+*   **VectorDB**: Pure semantic vector search
+*   **KeywordDB**: Traditional keyword-based search
+*   **HybridDB**: Combines vector + keyword search (Recommended)
+*   **RagDB**: RAG database for file-based search with line numbers
+
 ## Tools
 
 ### 1. `cigrep` (Semantic File Search)
@@ -69,30 +78,62 @@ And set the environment variable `CICADA_HYBRID_DIR` to your database path.
 
 ## Quick Start
 
+### 1. Generate Embeddings
+
+Cicada Vector requires you to provide embeddings (vectors). Use Ollama to generate them:
+
 ```python
-from cicada_vector import Store
+import json
+import urllib.request
 
-# Initialize (embeddings handled automatically via Ollama)
-db = Store("./my_knowledge_base")
+def get_embedding(text, model="nomic-embed-text"):
+    """Get embedding from Ollama API"""
+    url = "http://localhost:11434/api/embeddings"
+    data = json.dumps({"model": model, "prompt": text}).encode('utf-8')
+    
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={'Content-Type': 'application/json'}
+    )
+    
+    with urllib.request.urlopen(req, timeout=30) as response:
+        result = json.loads(response.read().decode('utf-8'))
+        return result['embedding']
+```
 
-# Add data - just provide text, we handle embeddings
-db.add(id="auth.py", text="def login(username, password):\n    ...", meta={"path": "src/auth.py"})
-db.add(id="user.py", text="class User:\n    ...", meta={"path": "src/user.py"})
+### 2. Create Database and Add Data
 
-# Search - just provide query text, we handle embeddings
-results = db.search("how to authenticate users", k=5)
-for id, score, meta in results:
-    print(f"[{score:.4f}] {id}: {meta.get('path')}")
+```python
+from cicada_vector import HybridDB
 
-# Custom embedding provider (optional)
-from cicada_vector import EmbeddingProvider
+# Initialize HybridDB (combines vector + keyword search)
+db = HybridDB("./my_knowledge_base")
 
-class MyCustomEmbedder:
-    def embed(self, text: str) -> list[float]:
-        # Use OpenAI, HuggingFace, or any embedding service
-        return my_embedding_service(text)
+# Add data with embeddings
+auth_text = "def login(username, password):\n    ..."
+auth_vector = get_embedding(auth_text)
+db.add(id="auth.py", vector=auth_vector, text=auth_text, meta={"path": "src/auth.py"})
 
-db = Store("./my_db", embedding_provider=MyCustomEmbedder())
+user_text = "class User:\n    ..."
+user_vector = get_embedding(user_text)
+db.add(id="user.py", vector=user_vector, text=user_text, meta={"path": "src/user.py"})
+
+# Persist to disk (optional - data is written on add, but this rewrites the file)
+db.persist()
+```
+
+### 3. Search
+
+```python
+# Generate embedding for query
+query = "how to authenticate users"
+query_vector = get_embedding(query)
+
+# Hybrid search (recommended - combines vector + keyword)
+results = db.search(query_text=query, query_vector=query_vector, k=5)
+for doc_id, score, meta in results:
+    print(f"[{score:.4f}] {doc_id}: {meta.get('path')}")
 ```
 
 ## Indexing Custom Data
@@ -100,12 +141,11 @@ db = Store("./my_db", embedding_provider=MyCustomEmbedder())
 Cicada Vector isn't just for code files - index any text data:
 
 ```python
-from cicada_vector import Store
+from cicada_vector import HybridDB
 import subprocess
-import json
 
 # Example: Index git commits
-db = Store("./git_commits_db")
+db = HybridDB("./git_commits_db")
 
 result = subprocess.run(
     ["git", "log", "--format=%H|%an|%s|%b", "-10"],
@@ -115,17 +155,69 @@ result = subprocess.run(
 for line in result.stdout.strip().split('\n'):
     sha, author, subject, body = line.split('|', 3)
     commit_text = f"{subject}\n{body}"
+    commit_vector = get_embedding(commit_text)
 
     db.add(
         id=sha,
+        vector=commit_vector,
         text=commit_text,
         meta={"author": author, "subject": subject, "type": "commit"}
     )
 
 # Search commits
-results = db.search("authentication bug fix", k=5)
+query = "authentication bug fix"
+query_vector = get_embedding(query)
+results = db.search(query_text=query, query_vector=query_vector, k=5)
 for sha, score, meta in results:
     print(f"[{score:.4f}] {sha[:8]} - {meta['subject']}")
+```
+
+## Other Database Classes
+
+### VectorDB (Pure Semantic Search)
+
+```python
+from cicada_vector import VectorDB
+
+db = VectorDB("./my_vectors.jsonl")
+
+# Add vectors (no text storage)
+db.add(id="doc1", vector=get_embedding("some text"), meta={"path": "doc1.txt"})
+
+# Search
+query_vector = get_embedding("search query")
+results = db.search(query_vector, k=5)
+```
+
+### KeywordDB (Traditional Search)
+
+```python
+from cicada_vector import KeywordDB
+
+db = KeywordDB("./my_keywords.jsonl")
+
+# Add documents
+db.add(id="doc1", text="some text to index")
+
+# Search (OR search - matches any word)
+results = db.search("search terms")
+```
+
+### RagDB (File-based RAG)
+
+```python
+from cicada_vector import RagDB
+
+db = RagDB("./my_rag_db")
+
+# Add files
+file_content = open("src/auth.py").read()
+file_vector = get_embedding(file_content)
+db.add_file(file_path="src/auth.py", content=file_content, vector=file_vector)
+
+# Search (returns file + line numbers)
+query_vector = get_embedding("authentication")
+results = db.search(query="authentication", query_vector=query_vector, k=3)
 ```
 
 **Use cases:**
