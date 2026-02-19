@@ -184,9 +184,9 @@ db = VectorDB("./my_vectors.jsonl")
 # Add vectors (no text storage)
 db.add(id="doc1", vector=get_embedding("some text"), meta={"path": "doc1.txt"})
 
-# Search
+# Search (reuses get_embedding() helper from Quick Start)
 query_vector = get_embedding("search query")
-results = db.search(query_vector, k=5)
+results = db.search(query=query_vector, k=5)
 ```
 
 ### KeywordDB (Traditional Search)
@@ -200,7 +200,7 @@ db = KeywordDB("./my_keywords.jsonl")
 db.add(id="doc1", text="some text to index")
 
 # Search (OR search - matches any word)
-results = db.search("search terms")
+results = db.search(query="search terms")
 ```
 
 ### RagDB (File-based RAG)
@@ -212,12 +212,13 @@ db = RagDB("./my_rag_db")
 
 # Add files
 file_content = open("src/auth.py").read()
+# Reuse get_embedding() helper from Quick Start
 file_vector = get_embedding(file_content)
 db.add_file(file_path="src/auth.py", content=file_content, vector=file_vector)
 
 # Search (returns file + line numbers)
 query_vector = get_embedding("authentication")
-results = db.search(query="authentication", query_vector=query_vector, k=3)
+results = db.search(query="authentication", k=3, query_vector=query_vector)
 ```
 
 **Use cases:**
