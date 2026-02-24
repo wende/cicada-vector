@@ -1,9 +1,9 @@
 """
-Hybrid Database: Merges Vector and Keyword search results.
+Hybrid Database: Merges vector and keyword search results via Reciprocal Rank Fusion.
 """
 
 import os
-from typing import List, Tuple, Dict, Any, Optional
+from typing import List, Tuple, Dict, Optional
 from .db import EmbeddingDB
 from .keyword_db import KeywordDB
 from .embeddings import EmbeddingProvider, OllamaEmbedding
@@ -33,7 +33,6 @@ class Store:
         self.vector_db = EmbeddingDB(os.path.join(storage_dir, "vectors.jsonl"))
         self.keyword_db = KeywordDB(os.path.join(storage_dir, "keywords.json"))
 
-        # Set up embedding provider
         if embedding_provider is None:
             self.embedder = OllamaEmbedding(host=ollama_host, model=ollama_model)
         else:
@@ -60,9 +59,7 @@ class Store:
             text = legacy_text
             meta = legacy_meta
 
-        # Get embedding if not provided
         if vector is None:
-            # Use embed_text for embedding if provided, otherwise use full text
             text_to_embed = embed_text if embed_text is not None else text
             vector = self.embedder.embed(text_to_embed)
 
@@ -75,54 +72,47 @@ class Store:
         self.vector_db.persist()
         self.keyword_db.persist()
 
-    def _score_boosting_merge(self, vector_results: List[Tuple[str, float, dict]], keyword_results: List[str]) -> List[Tuple[str, float, dict]]:
+    def _rrf_merge(
+        self,
+        vector_results: List[Tuple[str, float, dict]],
+        keyword_results: List[str],
+        k_const: int = 60
+    ) -> List[Tuple[str, float, dict]]:
         """
-        Merge results using Score Boosting.
-        Base score = Cosine Similarity.
-        Keyword match = Boost (+0.2).
+        Reciprocal Rank Fusion: combines dense and sparse results by rank position.
+
+        Scale-invariant: only cares about rank, not raw score magnitude.
+        Both sources contribute equally regardless of their scoring distributions.
+        Output normalized to [0, 1] so display scores remain intuitive.
         """
-        # Map: doc_id -> score
-        final_scores: Dict[str, float] = {}
+        rrf_scores: Dict[str, float] = {}
+        meta_lookup: Dict[str, dict] = {}
 
-        # 1. Start with Vector Scores (True Semantic Confidence)
-        meta_lookup = {}
-
-        for doc_id, score, meta in vector_results:
-            final_scores[doc_id] = score
+        # Dense results: ranked by cosine similarity (descending)
+        for rank, (doc_id, _, meta) in enumerate(vector_results):
+            rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + 1.0 / (rank + 1 + k_const)
             meta_lookup[doc_id] = meta
 
-        # 2. Apply Keyword Boosts
-        keyword_set = set(keyword_results)
-
-        # Boost vector matches that also have keyword matches
-        for doc_id in final_scores:
-            if doc_id in keyword_set:
-                # Boost by 20% (clamped to 1.0)
-                final_scores[doc_id] = min(1.0, final_scores[doc_id] + 0.2)
-
-        # 3. Add Keyword-Only Matches (lower confidence range)
-        for doc_id in keyword_results:
-            if doc_id not in final_scores:
-                # Keyword-only matches get 0.4-0.6 range based on position
-                base_score = 0.5 - (keyword_results.index(doc_id) * 0.02)
-                final_scores[doc_id] = max(0.4, base_score)
-                # Fetch metadata from vector_db
+        # Sparse results: ranked by IDF score from keyword_db (descending)
+        for rank, doc_id in enumerate(keyword_results):
+            rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + 1.0 / (rank + 1 + k_const)
+            if doc_id not in meta_lookup:
                 try:
                     idx = self.vector_db.ids.index(doc_id)
                     meta_lookup[doc_id] = self.vector_db.metadata[idx]
                 except ValueError:
                     meta_lookup[doc_id] = {}
 
-        # 4. Sort
-        final_results = []
-        sorted_ids = sorted(final_scores.keys(), key=lambda x: final_scores[x], reverse=True)
+        sorted_ids = sorted(rrf_scores.keys(), key=lambda x: rrf_scores[x], reverse=True)
 
-        for doc_id in sorted_ids:
-            score = final_scores[doc_id]
-            meta = meta_lookup.get(doc_id, {})
-            final_results.append((doc_id, score, meta))
+        # Normalize to [0, 1] so the top result always reads as 1.0
+        if sorted_ids:
+            max_score = rrf_scores[sorted_ids[0]]
+            if max_score > 0:
+                for doc_id in rrf_scores:
+                    rrf_scores[doc_id] /= max_score
 
-        return final_results
+        return [(doc_id, rrf_scores[doc_id], meta_lookup.get(doc_id, {})) for doc_id in sorted_ids]
 
     def search(self, query_text: str, query_vector: Optional[List[float]] = None, k: int = 5) -> List[Tuple[str, float, dict]]:
         """
@@ -139,19 +129,14 @@ class Store:
             query_vector = k
             k = 5
 
-        # Get query embedding if not provided
         if query_vector is None:
             query_vector = self.embedder.embed(query_text)
 
-        # 1. Get Semantic Candidates (fetch more than K to allow reranking)
-        vector_hits = self.vector_db.search(query_vector, k=k*3)
-
-        # 2. Get Exact Keyword Candidates
+        # Fetch more than k from each source before fusion
+        vector_hits = self.vector_db.search(query_vector, k=k * 3)
         keyword_hits = self.keyword_db.search(query_text)
 
-        # 3. Merge using Score Boosting
-        merged = self._score_boosting_merge(vector_hits, keyword_hits)
-
+        merged = self._rrf_merge(vector_hits, keyword_hits)
         return merged[:k]
 
 
