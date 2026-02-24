@@ -16,7 +16,8 @@ class VectorIndex:
         storage_dir: str,
         embedding_provider: Optional[EmbeddingProvider] = None,
         ollama_host: str = "http://localhost:11434",
-        ollama_model: str = "nomic-embed-text"
+        ollama_model: str = "nomic-embed-text",
+        keyword_weight: float = 0.5
     ):
         """
         Initialize VectorIndex with two-level RAG architecture.
@@ -26,12 +27,15 @@ class VectorIndex:
             embedding_provider: Custom embedding provider (if None, uses Ollama)
             ollama_host: Ollama host (used if embedding_provider is None)
             ollama_model: Ollama model (used if embedding_provider is None)
+            keyword_weight: Weight for keyword results in RRF fusion (0.0-1.0).
+                0.0 = vectors only, 1.0 = keywords only, 0.5 = equal (default)
         """
         self.db = Store(
             storage_dir,
             embedding_provider=embedding_provider,
             ollama_host=ollama_host,
-            ollama_model=ollama_model
+            ollama_model=ollama_model,
+            keyword_weight=keyword_weight
         )
 
     def prepare_embed_text(self, file_path: str, content: str) -> str:

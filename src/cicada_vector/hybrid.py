@@ -15,7 +15,8 @@ class Store:
         storage_dir: str,
         embedding_provider: Optional[EmbeddingProvider] = None,
         ollama_host: str = "http://localhost:11434",
-        ollama_model: str = "nomic-embed-text"
+        ollama_model: str = "nomic-embed-text",
+        keyword_weight: float = 0.5
     ):
         """
         Initialize hybrid store.
@@ -25,6 +26,8 @@ class Store:
             embedding_provider: Custom embedding provider (if None, uses Ollama)
             ollama_host: Ollama host (used if embedding_provider is None)
             ollama_model: Ollama model (used if embedding_provider is None)
+            keyword_weight: Weight for keyword results in RRF fusion (0.0-1.0).
+                0.0 = vectors only, 1.0 = keywords only, 0.5 = equal (default)
         """
         self.storage_dir = storage_dir
         if not os.path.exists(storage_dir):
@@ -32,6 +35,7 @@ class Store:
 
         self.vector_db = EmbeddingDB(os.path.join(storage_dir, "vectors.jsonl"))
         self.keyword_db = KeywordDB(os.path.join(storage_dir, "keywords.json"))
+        self.keyword_weight = max(0.0, min(1.0, keyword_weight))
 
         if embedding_provider is None:
             self.embedder = OllamaEmbedding(host=ollama_host, model=ollama_model)
@@ -88,14 +92,16 @@ class Store:
         rrf_scores: Dict[str, float] = {}
         meta_lookup: Dict[str, dict] = {}
 
+        vector_weight = 1.0 - self.keyword_weight
+
         # Dense results: ranked by cosine similarity (descending)
         for rank, (doc_id, _, meta) in enumerate(vector_results):
-            rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + 1.0 / (rank + 1 + k_const)
+            rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + vector_weight / (rank + 1 + k_const)
             meta_lookup[doc_id] = meta
 
         # Sparse results: ranked by IDF score from keyword_db (descending)
         for rank, doc_id in enumerate(keyword_results):
-            rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + 1.0 / (rank + 1 + k_const)
+            rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + self.keyword_weight / (rank + 1 + k_const)
             if doc_id not in meta_lookup:
                 try:
                     idx = self.vector_db.ids.index(doc_id)

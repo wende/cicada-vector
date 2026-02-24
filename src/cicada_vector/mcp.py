@@ -21,7 +21,6 @@ except ImportError:
     raise ImportError(msg)
 
 from .db import EmbeddingDB
-from .hybrid import Store
 from .rag import VectorIndex
 from .indexer import DirectoryIndexer
 
@@ -94,44 +93,15 @@ def search_vectors(query: str, k: int = 5) -> str:
         return f"Search failed: {e}"
 
 @mcp.tool()
-def search_hybrid(query: str, k: int = 5) -> str:
+def search(query: str, k: int = 5) -> str:
     """
-    Search using Hybrid (Vector + Keyword) strategy.
-    BEST for code search where queries might contain exact identifiers (e.g. "UserAuth")
-    or general concepts (e.g. "login").
-    
-    Args:
-        query: The query text
-        k: Number of results
-    """
-    if not os.path.exists(DB_PATH):
-        return f"Error: Hybrid DB directory not found at {DB_PATH}"
-        
-    try:
-        db = Store(DB_PATH)
-        query_vec = get_embedding(query)
-        # Pass query text for keyword search, vector for semantic
-        results = db.search(query, query_vec, k=k)
-        
-        output = []
-        for id, score, meta in results:
-            text = meta.get("text", str(meta))
-            output.append(f"[{score:.4f}] {id}\n{text}\n")
-            
-        return "\n".join(output)
-    except Exception as e:
-        return f"Hybrid search failed: {e}"
+    Two-stage hybrid search (vector + keyword) that returns specific paragraphs.
+    Stage 1: finds the most relevant files using hybrid vector+keyword search.
+    Stage 2: within those files, returns the specific 15-line chunks that best match.
 
-@mcp.tool()
-def search_code_context(query: str, k: int = 3) -> str:
-    """
-    Find specific code snippets relevant to the query.
-    Uses RAG (Retrieval Augmented Generation) to find the file,
-    then scans for the most relevant lines.
-    
     Args:
         query: The question or topic (e.g. "how to connect to db")
-        k: Number of snippets to return
+        k: Number of paragraph snippets to return
     """
     if not os.path.exists(DB_PATH):
         return f"Error: Hybrid/RAG DB directory not found at {DB_PATH}"
