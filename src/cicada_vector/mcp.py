@@ -26,8 +26,7 @@ from .rag import VectorIndex
 from .indexer import DirectoryIndexer
 
 # Configuration
-DB_PATH = os.environ.get("CICADA_VECTOR_DB", "vectors.jsonl")
-HYBRID_DIR = os.environ.get("CICADA_HYBRID_DIR", "hybrid_db")
+DB_PATH = os.environ.get("CICADA_DB_PATH", "cicada_db")
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "nomic-embed-text")
 
@@ -57,7 +56,7 @@ def index_directory(path: str) -> str:
     """
     try:
         indexer = DirectoryIndexer(
-            HYBRID_DIR,
+            DB_PATH,
             ollama_host=OLLAMA_HOST,
             ollama_model=OLLAMA_MODEL
         )
@@ -76,11 +75,12 @@ def search_vectors(query: str, k: int = 5) -> str:
         query: The semantic query (e.g. "authentication logic")
         k: Number of results to return (default 5)
     """
-    if not os.path.exists(DB_PATH):
-        return f"Error: Vector DB not found at {DB_PATH}"
-        
+    vectors_path = os.path.join(DB_PATH, "vectors.jsonl")
+    if not os.path.exists(vectors_path):
+        return f"Error: Vector DB not found at {vectors_path}. Run index_directory first."
+
     try:
-        db = EmbeddingDB(DB_PATH)
+        db = EmbeddingDB(vectors_path)
         query_vec = get_embedding(query)
         results = db.search(query_vec, k=k)
         
@@ -104,11 +104,11 @@ def search_hybrid(query: str, k: int = 5) -> str:
         query: The query text
         k: Number of results
     """
-    if not os.path.exists(HYBRID_DIR):
-        return f"Error: Hybrid DB directory not found at {HYBRID_DIR}"
+    if not os.path.exists(DB_PATH):
+        return f"Error: Hybrid DB directory not found at {DB_PATH}"
         
     try:
-        db = Store(HYBRID_DIR)
+        db = Store(DB_PATH)
         query_vec = get_embedding(query)
         # Pass query text for keyword search, vector for semantic
         results = db.search(query, query_vec, k=k)
@@ -133,11 +133,11 @@ def search_code_context(query: str, k: int = 3) -> str:
         query: The question or topic (e.g. "how to connect to db")
         k: Number of snippets to return
     """
-    if not os.path.exists(HYBRID_DIR):
-        return f"Error: Hybrid/RAG DB directory not found at {HYBRID_DIR}"
+    if not os.path.exists(DB_PATH):
+        return f"Error: Hybrid/RAG DB directory not found at {DB_PATH}"
         
     try:
-        db = VectorIndex(HYBRID_DIR)
+        db = VectorIndex(DB_PATH)
         query_vec = get_embedding(query)
         results = db.search(query, query_vec, k=k)
         

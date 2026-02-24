@@ -180,3 +180,29 @@ cicada-vec search "query" -k 5
    - Vector match: cosine similarity (0.0-1.0)
    - Vector + keyword boost: up to 1.0 (capped)
    - Keyword-only: 0.4-0.6 range
+
+
+<cicada>
+  **ALWAYS use cicada-mcp tools for Elixir and Python code searches. NEVER use Grep/Find for these tasks.**
+
+  ### Use cicada tools for:
+  - YOUR PRIMARY TOOL - Start here for ALL code exploration and discovery. `mcp__cicada__query`
+  - DEEP-DIVE TOOL: View a module's complete API and dependencies after discovering it with query. `mcp__cicada__search_module`
+  - DEEP-DIVE TOOL: Find function definitions and call sites after discovering with query. `mcp__cicada__search_function`
+  - UNIFIED HISTORY TOOL: One tool for all git history queries - replaces get_blame, get_commit_history, find_pr_for_line, and get_file_pr_history. `mcp__cicada__git_history`
+  - DRILL-DOWN TOOL: Expand a query result to see complete details. `mcp__cicada__expand_result`
+  - Force refresh the code index to pick up recent file changes. `mcp__cicada__refresh_index`
+  - ADVANCED: Execute jq queries directly against the Cicada index for custom analysis and data exploration. `mcp__cicada__query_jq`
+
+  ### DO NOT use Grep for:
+  - ❌ Searching for module structure
+  - ❌ Searching for function definitions
+  - ❌ Searching for module imports/usage
+
+  ### You can still use Grep for:
+  - ✓ Non-code files (markdown, JSON, config)
+  - ✓ String literal searches
+  - ✓ Pattern matching in single line comments
+</cicada>
+
+
