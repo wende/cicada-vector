@@ -30,5 +30,30 @@ class TestEmbeddingDB(unittest.TestCase):
         db2 = EmbeddingDB(self.db_path)
         self.assertEqual(len(db2.vectors), 1)
 
+    def test_meta_always_dict_on_add(self):
+        """meta must be a dict regardless of what is passed."""
+        db = EmbeddingDB(self.db_path)
+        db.add("str_meta", [1.0] * 10, "i am a string")  # type: ignore
+        db.add("none_meta", [0.5] * 10, None)
+        db.add("dict_meta", [0.1] * 10, {"key": "value"})
+
+        for m in db.metadata:
+            self.assertIsInstance(m, dict)
+
+    def test_meta_always_dict_after_reload(self):
+        """Non-dict meta stored on disk (legacy data) is coerced to dict on load."""
+        import json
+
+        # Write a record with string meta directly to mimic old/corrupted data
+        with open(self.db_path, 'w') as f:
+            f.write(json.dumps({"id": "old", "vector": [1.0] * 10, "meta": "raw string"}) + '\n')
+            f.write(json.dumps({"id": "new", "vector": [0.5] * 10, "meta": {"key": "val"}}) + '\n')
+            f.write(json.dumps({"id": "null", "vector": [0.1] * 10, "meta": None}) + '\n')
+
+        db = EmbeddingDB(self.db_path)
+        self.assertEqual(len(db.metadata), 3)
+        for m in db.metadata:
+            self.assertIsInstance(m, dict)
+
 if __name__ == "__main__":
     unittest.main()

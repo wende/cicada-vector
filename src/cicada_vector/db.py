@@ -60,7 +60,8 @@ class EmbeddingDB:
                     self.ids.append(record['id'])
                     # Normalize on load for backward compat with un-normalized indices
                     self.vectors.append(_normalize_vector(record['vector']))
-                    self.metadata.append(record.get('meta', {}))
+                    raw_meta = record.get('meta', {})
+                    self.metadata.append(raw_meta if isinstance(raw_meta, dict) else {})
                 except json.JSONDecodeError:
                     continue
 
@@ -79,14 +80,15 @@ class EmbeddingDB:
         normalized = _normalize_vector(vector)
         self.ids.append(id)
         self.vectors.append(normalized)
-        self.metadata.append(meta or {})
+        meta_dict = meta if isinstance(meta, dict) else {}
+        self.metadata.append(meta_dict)
         self._dirty = True
 
         # Append to file immediately (Write Ahead Log style)
         record = {
             'id': id,
             'vector': normalized,
-            'meta': meta or {}
+            'meta': meta_dict
         }
         with open(self.storage_path, 'a', encoding='utf-8') as f:
             f.write(json.dumps(record) + '\n')
