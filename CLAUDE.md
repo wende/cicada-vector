@@ -166,6 +166,15 @@ cicada-vec search "query" -k 5
 - **No Makefile**: Run commands directly with `uv run`
 - **No test framework installed**: Tests exist in `tests/` but pytest is not in dependencies
 
+## Releasing
+
+CI handles PyPI publishing automatically via `.github/workflows/publish.yml`. To release a patch version:
+1. Bump version in `pyproject.toml`
+2. Commit, tag with `v*.*.*`, push commit + tag
+3. CI runs tests → publishes to TestPyPI → publishes to PyPI
+
+Do NOT publish locally — just push the tag and let CI handle it.
+
 ## Important Notes
 
 1. **Chunks pollute search results**: The broad search can return cached chunks. Always filter `#chunk_` from doc_id in broad search and fetch `k*10` results to compensate.
