@@ -10,6 +10,24 @@ from collections import defaultdict
 from typing import Dict, List, Set
 
 
+_STOPWORDS = frozenset("""
+a about above after again against all am an and any are aren't as at be because
+been before being below between both but by can't cannot could couldn't did
+didn't do does doesn't doing don't down during each few for from further get
+got had hadn't has hasn't have haven't having he he'd he'll he's her here
+here's hers herself him himself his how how's i i'd i'll i'm i've if in into
+is isn't it it's its itself let's me more most mustn't my myself no nor not of
+off on once only or other ought our ours ourselves out over own same shan't she
+she'd she'll she's should shouldn't so some such than that that's the their
+theirs them themselves then there there's these they they'd they'll they're
+they've this those through to too under until up upon very was wasn't we we'd
+we'll we're we've were weren't what what's when when's where where's which
+while who who's whom why why's will with won't would wouldn't you you'd you'll
+you're you've your yours yourself yourselves also just like one two three four
+five use used using many much new even still already way well make made really
+""".split())
+
+
 class KeywordDB:
     def __init__(self, storage_path: str):
         self.storage_path = storage_path
@@ -22,8 +40,10 @@ class KeywordDB:
             self._load()
 
     def _tokenize(self, text: str) -> Set[str]:
-        """Simple tokenization: lowercase, split by non-alphanumeric."""
-        return set(word.lower() for word in re.findall(r"\b\w+\b", text))
+        """Tokenize and strip stopwords — keeps proper nouns and domain terms."""
+        return set(
+            word.lower() for word in re.findall(r"\b\w+\b", text)
+        ) - _STOPWORDS
 
     def _load(self):
         """Load index from JSON file."""

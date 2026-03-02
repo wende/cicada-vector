@@ -7,6 +7,7 @@ import re
 from typing import List, Dict, Tuple, Optional
 from .db import _normalize_vector
 from .hybrid import Store
+from .keyword_db import _STOPWORDS
 from .embeddings import EmbeddingProvider
 
 
@@ -238,7 +239,7 @@ class VectorIndex:
         all_results = self.db.search(query, k=k * 10, query_vector=query_vector)
 
         rag_results = []
-        query_terms = re.findall(r"\w+", query)
+        query_terms = [t for t in re.findall(r"\w+", query) if t.lower() not in _STOPWORDS]
         seen_files = set()
         files_processed = 0
 
